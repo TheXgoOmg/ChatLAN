@@ -25,9 +25,11 @@ public class Server {
                 String message = input.readUTF();
                 System.out.println();
                 System.out.println(message);
+                System.out.println();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
+            System.out.println("Server stopped");
         }
 
     }
