@@ -7,19 +7,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.stream.Stream;
 
 public class Server {
     final static String IP = "127.0.0.1";
     private ServerSocket serverSocket = null;
     Socket socket = null;
     static ArrayList<PrintWriter> printWriters = new ArrayList<>();
-    long id = 0;
 
 
     public Server(String ip, int port) throws IOException {
         serverSocket = new ServerSocket(port, 50, InetAddress.getByName(ip));
-        Path files = Paths.get("archivos/");
+        Path files = Paths.get("files/");
         Files.createDirectories(files);
 
         try  {
@@ -28,8 +26,7 @@ public class Server {
             while (true) {
                 socket = serverSocket.accept();
                 printWriters.add(new PrintWriter (socket.getOutputStream(), true));
-                new SocketFunctions(socket,id,files).start();
-                id++;
+                new SocketFunctions(socket,files).start();
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -50,9 +47,8 @@ public class Server {
             return id;
         }
 
-        public SocketFunctions(Socket socket, long id, Path files) throws IOException {
+        public SocketFunctions(Socket socket, Path files) throws IOException {
             this.socket = socket;
-            this.id = id;
             this.files = files;
         }
         @Override
@@ -94,14 +90,16 @@ public class Server {
                         }
                         output.println();
                     } else if (message.equals("/files")) {
-                        try (Stream<Path> files = Files.list(Paths.get("archivos"))) {
-                            StringBuilder fileMessage = new StringBuilder();
-                            files.forEach(file -> fileMessage.append(file.getFileName()));
-                        } catch (IOException e) {
-                            System.out.println("Error displaying files");
-                        }
+                        output.printf("--- Files in %s/ %s%n",files.getFileName(),"-".repeat(30));
+                        Files.list(files)
+                                .map(Path::getFileName)
+                                .forEach(fileName -> output.println("- "+ fileName));
+                        output.println("-".repeat(50));
+                        message = String.format("%n-- Show %s files%n",files.getFileName());
+                        System.out.println(message);
+
                     }
-                    sendBroadcast(message, id);
+                    sendBroadcast(output, message);
                 }
             } catch (IOException | NullPointerException ignored) {
             } finally {
@@ -114,9 +112,9 @@ public class Server {
             }
         }
     }
-    static void sendBroadcast(String message, long id){
+    static void sendBroadcast(PrintWriter output, String message){
         for (int i=0; i<printWriters.size(); i++) {
-            if (i != id) {
+            if (!output.equals(printWriters.get(i))) {
                 printWriters.get(i).println(message);
             }
         }

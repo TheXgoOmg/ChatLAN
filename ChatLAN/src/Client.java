@@ -25,6 +25,7 @@ public class Client {
                 mess = in.readLine();
                 System.out.println();
                 if (!mess.trim().isEmpty()) {
+                    mess = mess.trim();
                     if (mess.split(" ")[0].equals("/upload") && mess.split(" ").length==2) {
                         try {
                             String filePath = mess.split(" ")[1];
@@ -35,6 +36,8 @@ public class Client {
                         } catch (Exception e) {
                             System.out.println("Error uploading file");
                         }
+                    } else if (mess.equals("/files")) {
+                        out.println(mess);
                     }
                     if (isFile) {
                         out.println(mess);
