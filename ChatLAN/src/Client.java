@@ -23,27 +23,28 @@ public class Client {
             do {
                 isFile = false;
                 mess = in.readLine();
+                if (mess == null || mess.trim().isEmpty()) {
+                    continue;
+                }
                 System.out.println();
-                if (!mess.trim().isEmpty()) {
-                    mess = mess.trim();
-                    if (mess.split(" ")[0].equals("/upload") && mess.split(" ").length==2) {
-                        try {
-                            String filePath = mess.split(" ")[1];
-                            File file = new File(filePath);
-                            if (file.isFile()) {
-                                isFile = true;
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Error uploading file");
+                mess = mess.trim();
+                if (mess.split(" ")[0].equals("/upload") && mess.split(" ").length==2) {
+                    try {
+                        String filePath = mess.split(" ")[1];
+                        File file = new File(filePath);
+                        if (file.isFile()) {
+                            isFile = true;
                         }
-                    } else if (mess.equals("/files")) {
-                        out.println(mess);
+                    } catch (Exception e) {
+                        System.out.println("Error uploading file");
                     }
-                    if (isFile) {
-                        out.println(mess);
-                    } else {
-                        out.println(preMess + mess);
-                    }
+                } else if (mess.equals("/files")) {
+                    out.println(mess);
+                }
+                if (isFile) {
+                    out.println(mess);
+                } else {
+                    out.println(preMess + mess);
                 }
             } while (!mess.equals("/q"));
             System.out.println("You have disconnected from the server.");

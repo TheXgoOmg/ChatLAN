@@ -1,4 +1,3 @@
-import javax.smartcardio.CardChannel;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -12,7 +11,7 @@ public class Server {
     final static String IP = "127.0.0.1";
     private ServerSocket serverSocket = null;
     Socket socket = null;
-    static ArrayList<PrintWriter> printWriters = new ArrayList<>();
+    static ArrayList<Socket> clientSockets = new ArrayList<>();
 
 
     public Server(String ip, int port) throws IOException {
@@ -25,7 +24,7 @@ public class Server {
             System.out.printf("Waiting for clients...%n");
             while (true) {
                 socket = serverSocket.accept();
-                printWriters.add(new PrintWriter (socket.getOutputStream(), true));
+                clientSockets.add(socket);
                 new SocketFunctions(socket,files).start();
             }
         } catch (IOException e) {
@@ -54,12 +53,14 @@ public class Server {
         @Override
         public void run() {
             String nombreClient = null;
+            boolean send = true;
             try (BufferedReader input = new BufferedReader (new InputStreamReader(socket.getInputStream()));
                  PrintWriter output = new PrintWriter (socket.getOutputStream(), true)) {
                 nombreClient = input.readLine();
                 System.out.printf("%nClient %s id: %d connected%n", nombreClient, id);
                 while(true) {
                     String message = input.readLine();
+
                     if (message.equals("/q")) {
                         break;
                     } else if (message.split(" ")[0].equals("/upload")) {
@@ -89,34 +90,45 @@ public class Server {
                             System.out.println("Error uploading file '" + fileName + "': " + e.getMessage());
                         }
                         output.println();
+                        send = true;
                     } else if (message.equals("/files")) {
                         output.printf("--- Files in %s/ %s%n",files.getFileName(),"-".repeat(30));
                         Files.list(files)
                                 .map(Path::getFileName)
                                 .forEach(fileName -> output.println("- "+ fileName));
                         output.println("-".repeat(50));
-                        message = String.format("%n-- Show %s files%n",files.getFileName());
-                        System.out.println(message);
-
+                        System.out.println(String.format("%n-- Show %s files/%n",files.getFileName()));
+                        send = false;
                     }
-                    sendBroadcast(output, message);
+                    System.out.println(send);
+                    if (send) {
+                        sendBroadcast(socket, message);
+                    }
                 }
             } catch (IOException | NullPointerException ignored) {
             } finally {
                 try {
                     socket.close();
-                    System.out.printf("%nClient %s disconnected%n", nombreClient);
+                    String mess = String.format("%nClient %s disconnected", nombreClient);
+                    System.out.println(mess);
+                    sendBroadcast(socket, mess);
                 } catch (IOException e) {
                     System.out.println("%nError cerrando la conexión: " + e.getMessage());
                 }
             }
         }
     }
-    static void sendBroadcast(PrintWriter output, String message){
-        for (int i=0; i<printWriters.size(); i++) {
-            if (!output.equals(printWriters.get(i))) {
-                printWriters.get(i).println(message);
+    static void sendBroadcast(Socket sender, String message){
+        for (Socket client : clientSockets) {
+            if (!client.equals(sender)) {
+                try {
+                    PrintWriter outBroad = new PrintWriter(client.getOutputStream(), true);
+                    outBroad.println(message);
+                } catch (IOException e) {
+                    System.out.println("Error sending broadcast: " + e.getCause());
+                }
             }
         }
+
     }
 }
