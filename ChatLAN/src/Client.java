@@ -12,6 +12,7 @@ public class Client {
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
              Scanner sc = new Scanner(System.in)) {
+            boolean isFile;
             System.out.print("Enter your name: ");
             nombre = sc.nextLine();
             System.out.println();
@@ -20,9 +21,30 @@ public class Client {
             String preMess = String.format("> %s: ",nombre);
             String mess;
             do {
+                isFile = false;
                 mess = in.readLine();
+                if (mess == null || mess.trim().isEmpty()) {
+                    continue;
+                }
                 System.out.println();
-                if (!mess.trim().isEmpty()) {
+                mess = mess.trim();
+                if (mess.split(" ")[0].equals("/upload") && mess.split(" ").length==2) {
+                    try {
+                        String filePath = mess.split(" ")[1];
+                        File file = new File(filePath);
+                        if (file.isFile()) {
+                            isFile = true;
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Error uploading file");
+                    }
+                } else if (mess.equals("/files") || mess.split(" ")[0].equals("/show")) {
+                    out.println(mess);
+                    isFile = true;
+                }
+                if (isFile) {
+                    out.println(mess);
+                } else {
                     out.println(preMess + mess);
                 }
             } while (!mess.equals("/q"));
@@ -46,7 +68,9 @@ public class Client {
                 String mess;
                 while (true) {
                     mess = in.readLine();
-                    System.out.printf("%n%s%n",mess);
+                    if (mess != null && !mess.trim().isEmpty()) {
+                        System.out.printf("%s%n%n",mess);
+                    }
                 }
             } catch (IOException ignored) {
             }
