@@ -38,8 +38,9 @@ public class Client {
                     } catch (Exception e) {
                         System.out.println("Error uploading file");
                     }
-                } else if (mess.equals("/files")) {
+                } else if (mess.equals("/files") || mess.split(" ")[0].equals("/show")) {
                     out.println(mess);
+                    isFile = true;
                 }
                 if (isFile) {
                     out.println(mess);
@@ -67,7 +68,9 @@ public class Client {
                 String mess;
                 while (true) {
                     mess = in.readLine();
-                    System.out.printf("%s%n%n",mess);
+                    if (mess != null && !mess.trim().isEmpty()) {
+                        System.out.printf("%s%n%n",mess);
+                    }
                 }
             } catch (IOException ignored) {
             }

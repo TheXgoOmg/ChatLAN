@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.stream.Stream;
 
 public class Server {
     final static String IP = "127.0.0.1";
@@ -37,14 +38,7 @@ public class Server {
     }
     class SocketFunctions extends Thread {
         private Socket socket = null;
-        private long id;
         private Path files;
-
-        // Getters
-        @Override
-        public long getId() {
-            return id;
-        }
 
         public SocketFunctions(Socket socket, Path files) throws IOException {
             this.socket = socket;
@@ -53,18 +47,23 @@ public class Server {
         @Override
         public void run() {
             String nombreClient = null;
-            boolean send = true;
             try (BufferedReader input = new BufferedReader (new InputStreamReader(socket.getInputStream()));
                  PrintWriter output = new PrintWriter (socket.getOutputStream(), true)) {
                 nombreClient = input.readLine();
-                System.out.printf("%nClient %s id: %d connected%n", nombreClient, id);
+
+                System.out.printf("%nClient %s connected%n", nombreClient);
+                boolean preMessFile = false;
                 while(true) {
                     String message = input.readLine();
+                    if (preMessFile) {
+                        message = "";
+                    }
+                    preMessFile = false;
+                    String[] messSplit = message.split(" ");
 
                     if (message.equals("/q")) {
                         break;
-                    } else if (message.split(" ")[0].equals("/upload")) {
-                        String[] messSplit = message.split(" ");
+                    } else if (messSplit[0].equals("/upload")) {
                         String[] pathSplit = messSplit[1].split("\\\\");
                         File originFile = new File(messSplit[1]);
                         String fileName = pathSplit[pathSplit.length - 1];
@@ -77,33 +76,40 @@ public class Server {
                             Files.createFile(filePath);
                             Files.write(filePath, Files.readAllBytes(originFile.toPath())); // ERROR
                             System.out.println();
-                            if (exists) {
-                                message = String.format("-- The file %s has been override by %s", fileName,nombreClient);
-                                output.print(message);
-                                System.out.println(message);
-                            } else {
-                                message = String.format("-- The file %s has been created by %s", fileName,nombreClient);
-                                output.print(message);
-                                System.out.println(message);
-                            }
+
+                            String responseMessage = String.format("-- The file %s has been %s by %s",fileName,exists ? "overwrriten":"created",nombreClient);
+                            System.out.println(responseMessage);
+                            output.println(responseMessage);
                         } catch (IOException e) {
                             System.out.println("Error uploading file '" + fileName + "': " + e.getMessage());
                         }
-                        output.println();
-                        send = true;
                     } else if (message.equals("/files")) {
                         output.printf("--- Files in %s/ %s%n",files.getFileName(),"-".repeat(30));
                         Files.list(files)
                                 .map(Path::getFileName)
                                 .forEach(fileName -> output.println("- "+ fileName));
                         output.println("-".repeat(50));
-                        System.out.println(String.format("%n-- Show %s files/%n",files.getFileName()));
-                        send = false;
+                        System.out.println(String.format("%n-- Show %s files/ to %s",files.getFileName(),nombreClient));
+                        preMessFile = true;
+                        continue;
+                    } else if (messSplit[0].equals("/show")) {
+                        Path path = Path.of(String.valueOf(files),messSplit[1]);
+                        try (Stream<String> readFile = Files.lines(path)) {
+                            System.out.printf("%nShow %s content to %s%n",path, nombreClient);
+                            output.printf("--- Content in %s %s%n",path,"-".repeat(20));
+                            readFile.forEach(output::println);
+                            output.println("-".repeat(50));
+                        } catch (IOException e) {
+                            System.out.printf("%nError showing file '%s': %s%n",messSplit[1],e.getMessage());
+                        } finally {
+                            preMessFile = true;
+                            continue;
+                        }
                     }
-                    System.out.println(send);
-                    if (send) {
-                        sendBroadcast(socket, message);
+                    if (!message.isEmpty() && message.charAt(0) == '/') {
+                        continue;
                     }
+                    sendBroadcast(socket, message);
                 }
             } catch (IOException | NullPointerException ignored) {
             } finally {
