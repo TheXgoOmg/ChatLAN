@@ -9,14 +9,15 @@ import java.util.ArrayList;
 import java.util.stream.Stream;
 
 public class Server {
-    final static String IP = "127.0.0.1";
     private ServerSocket serverSocket = null;
     Socket socket = null;
     static ArrayList<Socket> clientSockets = new ArrayList<>();
 
 
-    public Server(String ip, int port) throws IOException {
-        serverSocket = new ServerSocket(port, 50, InetAddress.getByName(ip));
+    public Server(int port) throws IOException {
+        String localIP = InetAddress.getLocalHost().getHostAddress();
+        System.out.println(localIP);
+        serverSocket = new ServerSocket(port, 50, InetAddress.getByName(localIP));
         Path files = Paths.get("files/");
         Files.createDirectories(files);
 
@@ -34,7 +35,7 @@ public class Server {
         }
     }
     public static void main(String[] args) throws IOException {
-        Server server = new Server(IP,5000);
+        Server server = new Server(6789);
     }
     class SocketFunctions extends Thread {
         private Socket socket = null;
@@ -130,8 +131,7 @@ public class Server {
                 try {
                     PrintWriter outBroad = new PrintWriter(client.getOutputStream(), true);
                     outBroad.println(message);
-                } catch (IOException e) {
-                    System.out.println("Error sending broadcast: " + e.getCause());
+                } catch (IOException ignore) {
                 }
             }
         }

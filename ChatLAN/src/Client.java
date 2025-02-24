@@ -4,11 +4,10 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Client {
-    final static String IP = "127.0.0.1";
     String nombre;
 
-    public Client(String ip, int port) throws IOException {
-        try (Socket socket = new Socket(InetAddress.getByName(ip), port);
+    public Client(InetAddress ip, int port) throws IOException {
+        try (Socket socket = new Socket(ip, port);
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
              Scanner sc = new Scanner(System.in)) {
@@ -54,7 +53,13 @@ public class Client {
         }
     }
     public static void main(String[] args) throws IOException {
-        Client client = new Client(IP,5000);
+        try (Scanner sc = new Scanner(System.in)) {
+            System.out.print("Enter the server IP address: ");
+            String ip = sc.nextLine();
+            Client client = new Client(InetAddress.getByName(ip),6789);
+        } catch (Exception e) {
+            System.out.println("Invalid port");
+        }
     }
     class GiveServerMesassages extends Thread {
         Socket socket;
